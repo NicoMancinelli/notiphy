@@ -130,6 +130,12 @@ func (s *Server) Handler() http.Handler {
 	mux.Handle("GET /static/", s.static)
 	mux.HandleFunc("GET /sw.js", s.handleServiceWorker)
 	mux.HandleFunc("GET /manifest.webmanifest", s.handleManifest)
+	// Browsers request these from the root regardless of what the HTML links
+	// to; serving them avoids a 404 on every page load and gives iOS a Home
+	// Screen icon when the PWA is installed.
+	mux.HandleFunc("GET /favicon.ico", s.handleIcon)
+	mux.HandleFunc("GET /apple-touch-icon.png", s.handleIcon)
+	mux.HandleFunc("GET /apple-touch-icon-precomposed.png", s.handleIcon)
 	mux.HandleFunc("GET /healthz", s.handleHealth)
 
 	return s.withLogging(mux)

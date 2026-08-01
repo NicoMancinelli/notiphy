@@ -30,10 +30,14 @@
 
   var supported = 'serviceWorker' in navigator && 'PushManager' in window;
 
-  if (!supported) {
-    show('wp-unsupported');
-  } else if (isIOS() && !isStandalone()) {
+  // Order matters here. iOS Safari does not expose PushManager at all until the
+  // site has been added to the Home Screen, so a plain feature test reports
+  // "unsupported" on exactly the devices that need the install instructions.
+  // Checking for iOS first is what turns a dead end into a next step.
+  if (isIOS() && !isStandalone()) {
     show('ios-install');
+  } else if (!supported) {
+    show('wp-unsupported');
   } else {
     show('wp-ui');
   }

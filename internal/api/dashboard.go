@@ -118,6 +118,20 @@ func (s *Server) handleServiceWorker(w http.ResponseWriter, r *http.Request) {
 	w.Write(body)
 }
 
+// handleIcon serves the app icon for favicon and apple-touch-icon requests.
+// A PNG is returned even for /favicon.ico: every current browser accepts one,
+// and it saves carrying a second image just for the legacy extension.
+func (s *Server) handleIcon(w http.ResponseWriter, r *http.Request) {
+	body, err := webFS.ReadFile("static/icon-192.png")
+	if err != nil {
+		http.Error(w, "not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	w.Write(body)
+}
+
 // handleManifest serves the PWA manifest. iOS only grants Web Push to a site
 // added to the Home Screen, and it will not offer that without a manifest.
 func (s *Server) handleManifest(w http.ResponseWriter, r *http.Request) {
