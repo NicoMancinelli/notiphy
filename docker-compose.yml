@@ -1,0 +1,41 @@
+services:
+  notiphy:
+    build:
+      context: .
+      args:
+        VERSION: dev
+    # Or use a prebuilt image once you publish one:
+    # image: ghcr.io/nicomancinelli/notiphy:latest
+    container_name: notiphy
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    environment:
+      # BASE_URL must be the address your phone can actually reach. Links to
+      # the approval and live-activity pages are built from it, so a wrong
+      # value produces notifications that tap through to nothing.
+      NOTIPHY_BASE_URL: "http://localhost:8080"
+
+      # Protects the dashboard and device registration. Without it, anyone who
+      # can reach this server can register a device and receive your
+      # notifications. Required if you expose notiphy beyond a private network.
+      NOTIPHY_ADMIN_TOKEN: "${NOTIPHY_ADMIN_TOKEN:-}"
+
+      # Default ntfy server for devices that do not name their own.
+      NOTIPHY_NTFY_DEFAULT_SERVER: "https://ntfy.sh"
+
+      # How far `progress` must move before a milestone notification fires on
+      # transports that cannot update a card in place.
+      NOTIPHY_ACTIVITY_PROGRESS_STEP: "0.25"
+
+      # --- Phase 2: native Live Activities, Dynamic Island, one-tap buttons ---
+      # Fill these in once you have an Apple Developer Program membership and
+      # the notiphy iOS app. Nothing else needs to change: the router starts
+      # preferring APNs because its capabilities outrank the others.
+      # NOTIPHY_APNS_KEY_FILE: /data/AuthKey_XXXXXXXX.p8
+      # NOTIPHY_APNS_KEY_ID:   XXXXXXXXXX
+      # NOTIPHY_APNS_TEAM_ID:  YYYYYYYYYY
+      # NOTIPHY_APNS_TOPIC:    com.example.notiphy
+      # NOTIPHY_APNS_PRODUCTION: "true"

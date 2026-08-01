@@ -1,0 +1,54 @@
+# notiphy configuration. Every value can also be set as an environment
+# variable with a NOTIPHY_ prefix (NOTIPHY_BASE_URL, NOTIPHY_ADMIN_TOKEN, ...).
+# Precedence: command-line flags > environment > this file > defaults.
+
+listen: ":8080"
+
+# The address your phone can actually reach. Notifications embed absolute links
+# to the approval and live-activity pages, so if this is wrong those links go
+# nowhere. With Tailscale this is usually https://<host>.<tailnet>.ts.net
+base_url: "http://localhost:8080"
+
+db: "notiphy.db"
+
+# Protects the dashboard, device registration, and token management. These
+# endpoints cannot use a webhook token because they are how devices get added
+# in the first place. Leave empty ONLY on a private network.
+admin_token: ""
+
+# Off by default: this is your server, not a metered tier. Set a positive value
+# to enable Hark-compatible 429 responses.
+rate_limit_per_minute: 0
+
+# How long an unanswered approval stays answerable when the caller does not say.
+default_response_ttl: 5m
+
+# Live Activity lifetimes when the caller does not say.
+default_activity_ttl: 8h
+default_stale_after: 4h
+
+# How far `progress` must advance before a milestone notification fires on
+# transports that stack notifications instead of updating a card in place.
+# Lower means more notifications. 0.25 notifies at roughly every quarter.
+activity_progress_step: 0.25
+
+# Default ntfy server for devices that do not specify their own.
+ntfy_default_server: "https://ntfy.sh"
+
+# Web Push (VAPID). Left empty, notiphy generates a keypair on first boot and
+# stores it in the database. Only set these to carry keys across a rebuild —
+# changing them invalidates every existing subscription.
+vapid_public_key: ""
+vapid_private_key: ""
+vapid_subject: "mailto:you@example.com"
+
+# --- Phase 2: APNs ---
+# Filling these in enables native Live Activities, the Dynamic Island, and
+# one-tap action buttons. It requires a paid Apple Developer Program
+# membership: the push entitlement is not available to free/personal Apple
+# teams at any tier of effort.
+apns_key_file: ""
+apns_key_id: ""
+apns_team_id: ""
+apns_topic: ""
+apns_production: false

@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>notiphy — locked</title>
+  {{template "style" .}}
+</head>
+<body>
+<div class="wrap narrow">
+  <h1>Admin token required</h1>
+  <p class="sub">This part of notiphy is protected.</p>
+  <div class="card">
+    <p style="margin:0 0 10px">Open it with your token appended:</p>
+    <p class="mono" style="margin:0">{{.BaseURL}}/?token=<em>YOUR_ADMIN_TOKEN</em></p>
+    <p class="muted" style="font-size:13px; margin:12px 0 0">
+      The token is remembered in a cookie afterwards, so you only paste it once.
+    </p>
+  </div>
+</div>
+</body>
+</html>

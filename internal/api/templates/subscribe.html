@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>notiphy — add this device</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="notiphy">
+  <meta name="theme-color" content="#2f6df6">
+  {{template "style" .}}
+  <style>
+    .step { display:flex; gap:12px; align-items:flex-start; margin-bottom:14px; }
+    .num {
+      flex:0 0 24px; height:24px; border-radius:50%; background:var(--accent); color:#fff;
+      font-size:13px; font-weight:700; display:grid; place-items:center;
+    }
+    .hide { display:none; }
+    #status { margin-top:12px; font-size:14px; }
+  </style>
+</head>
+<body>
+<div class="wrap narrow">
+
+  <h1>Add this device</h1>
+  <p class="sub">Two ways to get notifications. Pick either — or both.</p>
+
+  <h2>Option A · Web Push (no app, no Apple account)</h2>
+  <div class="card">
+    <p class="muted" style="font-size:14px; margin-top:0">
+      Fully self-hosted: your server signs the push itself. Nothing routes through
+      a third party.
+    </p>
+
+    <div id="ios-install" class="hide">
+      <div class="step"><div class="num">1</div><div>Tap the <strong>Share</strong> button in Safari.</div></div>
+      <div class="step"><div class="num">2</div><div>Choose <strong>Add to Home Screen</strong>.</div></div>
+      <div class="step"><div class="num">3</div><div>Open notiphy from your Home Screen and come back here.</div></div>
+      <p class="muted" style="font-size:13px; margin:12px 0 0">
+        iOS only allows Web Push for sites installed to the Home Screen. This is an
+        Apple restriction, not a notiphy one.
+      </p>
+    </div>
+
+    <div id="wp-ui" class="hide">
+      <button id="wp-btn" class="btn-primary" style="width:100%">Enable notifications</button>
+    </div>
+
+    <div id="wp-unsupported" class="hide">
+      <p style="margin:0" class="muted">This browser does not support Web Push. Use Option B below.</p>
+    </div>
+
+    {{if not .WebPushReady}}
+      <p class="muted" style="margin:10px 0 0">Web Push is not configured on this server.</p>
+    {{end}}
+
+    <div id="status"></div>
+  </div>
+
+  <h2>Option B · ntfy</h2>
+  <div class="card">
+    <p class="muted" style="font-size:14px; margin-top:0">
+      Install the <strong>ntfy</strong> app, subscribe it to a topic, then register that
+      topic here. On Android this gives you real one-tap Approve/Deny buttons; on iOS
+      it falls back to tapping through to the approval page.
+    </p>
+    <form id="ntfy-form">
+      <p><input type="text" id="ntfy-topic" placeholder="Topic (pick something unguessable)" required></p>
+      <p><input type="text" id="ntfy-server" value="{{.NtfyServer}}" placeholder="ntfy server URL"></p>
+      <p><input type="text" id="ntfy-name" placeholder="Device name (e.g. iPhone)"></p>
+      <button class="btn-primary" type="submit" style="width:100%">Register ntfy device</button>
+    </form>
+    <div id="ntfy-status" style="margin-top:12px; font-size:14px"></div>
+  </div>
+
+  <p style="margin-top:24px"><a href="/">← Back to dashboard</a></p>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

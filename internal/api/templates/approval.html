@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>notiphy — approval</title>
+  {{template "style" .}}
+</head>
+<body>
+<div class="wrap narrow">
+
+  {{if .Event}}
+    <h1>{{if .Event.Title}}{{.Event.Title}}{{else}}Request{{end}}</h1>
+    <p class="sub">{{.Event.Body}}</p>
+  {{else}}
+    <h1>Request</h1>
+  {{end}}
+
+  {{if .Done}}
+    <div class="card">
+      <p style="margin:0"><strong>{{.Message}}</strong></p>
+      {{if and .Response .Response.AnsweredAt}}
+        <p class="muted" style="margin:8px 0 0; font-size:13px">
+          Answered {{ago .Response.AnsweredAt}} by {{.Response.AnsweredBy}}.
+        </p>
+      {{end}}
+    </div>
+    <p class="muted" style="font-size:13px">You can close this page.</p>
+
+  {{else if .IsText}}
+    <form method="post" action="/a/{{.Response.Secret}}">
+      <div class="card">
+        <textarea name="text" rows="4" placeholder="Type your reply…" autofocus required></textarea>
+      </div>
+      <button class="btn-primary" type="submit" style="width:100%">Send reply</button>
+    </form>
+    <p class="muted" style="font-size:13px; margin-top:14px">
+      Expires {{ts .Response.ExpiresAt}}.
+    </p>
+
+  {{else}}
+    <div class="btn-row">
+      {{range .Choices}}
+        <form method="post" action="/a/{{$.Response.Secret}}" style="flex:1 1 140px; margin:0">
+          <input type="hidden" name="value" value="{{.Value}}">
+          <button type="submit" style="width:100%"
+            class="{{if or (eq .Value "approve") (eq .Value "yes")}}btn-primary{{else}}btn-danger{{end}}">
+            {{.Label}}
+          </button>
+        </form>
+      {{end}}
+    </div>
+    <p class="muted" style="font-size:13px; margin-top:14px">
+      Expires {{ts .Response.ExpiresAt}}.
+    </p>
+  {{end}}
+
+</div>
+</body>
+</html>

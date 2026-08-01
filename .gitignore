@@ -1,0 +1,23 @@
+# Build output
+/notiphy
+/dist/
+/out/
+
+# Runtime state
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets — APNs keys must never be committed
+*.p8
+*.key
+!*.pub
+.env
+notiphy.yaml
+
+# OS
+.DS_Store
+
+# Claude Code machine-local settings
+.claude/settings.local.json

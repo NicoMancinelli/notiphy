@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{{.Activity.Title}} — notiphy</title>
+  {{template "style" .}}
+  <style>
+    .bar { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; margin: 18px 0 8px; }
+    .bar > i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .4s ease; }
+    .status { font-size: 20px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+    .pctlabel { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+    .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background: var(--accent); margin-right:7px; }
+    .dot.ended { background: var(--muted); }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+    .dot.live { animation: pulse 1.6s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+<div class="wrap narrow">
+
+  <h1>{{.Activity.Title}}</h1>
+  <p class="sub">
+    <span id="dot" class="dot {{if eq (printf "%s" .Activity.State) "active"}}live{{else}}ended{{end}}"></span>
+    <span id="state">{{if eq (printf "%s" .Activity.State) "active"}}Live{{else}}Ended{{end}}</span>
+  </p>
+
+  <div class="card">
+    <p class="status" id="status">{{if .Activity.Status}}{{.Activity.Status}}{{else}}—{{end}}</p>
+    <div class="bar"><i id="bar" style="width: {{.Progress}}%"></i></div>
+    <span class="pctlabel" id="pct">{{.Progress}}%</span>
+    <span class="pctlabel" id="updated" style="float:right">updated {{ago .Activity.UpdatedAt}}</span>
+  </div>
+
+  {{if not .Native}}
+    <div class="banner">
+      This page <em>is</em> the Live Activity. No transport on this server can render a
+      native ActivityKit card — that needs the iOS app and a paid Apple Developer
+      membership. This view updates in real time instead.
+    </div>
+  {{end}}
+
+</div>
+
+<script>
+  // Stream state changes so the page reflects progress without a reload.
+  (function () {
+    var id = {{.Activity.ID}};
+    var es = new EventSource("/live/" + id + "/stream");
+
+    es.addEventListener("update", function (e) {
+      var u = JSON.parse(e.data);
+      document.getElementById("status").textContent = u.status || "—";
+      var pct = Math.round((u.progress || 0) * 100);
+      document.getElementById("bar").style.width = pct + "%";
+      document.getElementById("pct").textContent = pct + "%";
+      document.getElementById("updated").textContent = "updated just now";
+      document.title = u.title + " — " + (u.status || "");
+
+      var live = u.state === "active";
+      document.getElementById("state").textContent = live ? "Live" : "Ended";
+      document.getElementById("dot").className = "dot " + (live ? "live" : "ended");
+    });
+
+    // The server closes the stream once the activity ends; don't reconnect.
+    es.addEventListener("done", function () { es.close(); });
+  })();
+</script>
+</body>
+</html>
