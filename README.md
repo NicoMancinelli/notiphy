@@ -75,7 +75,7 @@ Grab a tarball from [Releases](https://github.com/NicoMancinelli/notiphy/release
 — static, no dependencies, nothing to install alongside it:
 
 ```bash
-tar -xzf notiphy_v0.1.0_linux_amd64.tar.gz
+tar -xzf notiphy_v0.0.1_linux_amd64.tar.gz
 ./notiphy serve --base-url http://localhost:8080
 ```
 
