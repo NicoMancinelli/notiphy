@@ -1,5 +1,9 @@
 # notiphy
 
+[![CI](https://github.com/NicoMancinelli/notiphy/actions/workflows/ci.yml/badge.svg)](https://github.com/NicoMancinelli/notiphy/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/NicoMancinelli/notiphy.svg)](https://pkg.go.dev/github.com/NicoMancinelli/notiphy)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Self-hosted webhooks → phone notifications, approvals, and Live Activities.
 A free, single-binary alternative to [Hark](https://hark.ryan.ceo), with the
 same API and nothing behind a paywall.
@@ -46,20 +50,43 @@ opens on your own server, you tap Approve. One extra tap versus Hark.
 
 ---
 
-## Quick start
+## Install
 
 ### Docker
+
+```bash
+docker run -d --name notiphy -p 8080:8080 -v ./data:/data \
+  -e NOTIPHY_BASE_URL=http://localhost:8080 \
+  ghcr.io/nicomancinelli/notiphy:latest
+```
+
+Or with compose, which documents every option inline:
 
 ```bash
 docker compose up -d
 ```
 
-### Binary
+Images are multi-arch (`linux/amd64`, `linux/arm64`), so a Raspberry Pi or an
+arm64 LXC works the same as an x86 box.
+
+### Prebuilt binary
+
+Grab a tarball from [Releases](https://github.com/NicoMancinelli/notiphy/releases)
+— static, no dependencies, nothing to install alongside it:
 
 ```bash
-go build -o notiphy ./cmd/notiphy
+tar -xzf notiphy_v0.1.0_linux_amd64.tar.gz
 ./notiphy serve --base-url http://localhost:8080
 ```
+
+### From source
+
+```bash
+go install github.com/NicoMancinelli/notiphy/cmd/notiphy@latest
+notiphy serve --base-url http://localhost:8080
+```
+
+## Quick start
 
 Then:
 

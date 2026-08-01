@@ -1,11 +1,13 @@
 services:
   notiphy:
-    build:
-      context: .
-      args:
-        VERSION: dev
-    # Or use a prebuilt image once you publish one:
-    # image: ghcr.io/nicomancinelli/notiphy:latest
+    # Multi-arch (amd64 + arm64), published by the release workflow on tag.
+    image: ghcr.io/nicomancinelli/notiphy:latest
+    # To build from a source checkout instead, comment out `image:` above and
+    # uncomment this:
+    # build:
+    #   context: .
+    #   args:
+    #     VERSION: dev
     container_name: notiphy
     restart: unless-stopped
     ports:
