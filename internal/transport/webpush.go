@@ -7,8 +7,8 @@ import (
 	"io"
 	"strings"
 
-	webpush "github.com/SherClockHolmes/webpush-go"
 	"github.com/NicoMancinelli/notiphy/internal/model"
+	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
 // WebPush delivers to a PWA installed on the home screen via the W3C Web Push
