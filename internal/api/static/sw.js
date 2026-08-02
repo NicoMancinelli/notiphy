@@ -44,9 +44,20 @@ self.addEventListener('push', function (event) {
     options.image = data.image;
   }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'notiphy', options)
-  );
+  var work = [self.registration.showNotification(data.title || 'notiphy', options)];
+
+  // Badge the Home Screen icon with the number of things waiting. This is the
+  // closest free stand-in for a Live Activity: it persists without the app
+  // running, and it is the only ambient signal iOS gives a web app.
+  if (typeof data.badgeCount === 'number' && 'setAppBadge' in navigator) {
+    work.push(
+      data.badgeCount > 0
+        ? navigator.setAppBadge(data.badgeCount).catch(function () {})
+        : navigator.clearAppBadge().catch(function () {})
+    );
+  }
+
+  event.waitUntil(Promise.all(work));
 });
 
 self.addEventListener('notificationclick', function (event) {

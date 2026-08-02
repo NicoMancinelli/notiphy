@@ -211,6 +211,9 @@ type Notification struct {
 	Actions  []Action
 	// Response is set when this notification is asking a question.
 	Response *Response
+	// BadgeCount is how many things are waiting on the user. Transports that
+	// can badge an app icon use it; the rest ignore it.
+	BadgeCount *int
 }
 
 // Event is the stored record of one publish request.

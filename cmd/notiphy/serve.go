@@ -103,7 +103,8 @@ func cmdServe(args []string) error {
 	defer stop()
 
 	go cb.Run(ctx, 10*time.Second)
-	go sweep(ctx, st, log)
+	go rt.RunRetries(ctx, 5*time.Second)
+	go sweep(ctx, st, srv, cfg, log)
 
 	httpSrv := &http.Server{
 		Addr:    cfg.Listen,
@@ -180,7 +181,7 @@ func ensureVAPID(st *store.Store, cfg *config.Config, log *slog.Logger) (string,
 }
 
 // sweep expires stale responses and activities and trims the idempotency table.
-func sweep(ctx context.Context, st *store.Store, log *slog.Logger) {
+func sweep(ctx context.Context, st *store.Store, srv *api.Server, cfg config.Config, log *slog.Logger) {
 	t := time.NewTicker(30 * time.Second)
 	defer t.Stop()
 
@@ -202,14 +203,28 @@ func sweep(ctx context.Context, st *store.Store, log *slog.Logger) {
 				log.Info("ended expired activities", "count", n)
 			}
 
-			// Idempotency records only need to outlive plausible retries.
+			srv.Limiter().Cleanup()
+
 			sinceLastPurge += 30 * time.Second
 			if sinceLastPurge >= time.Hour {
 				sinceLastPurge = 0
+
+				// Idempotency records only need to outlive plausible retries.
 				if n, err := st.PurgeIdempotency(48 * time.Hour); err != nil {
 					log.Warn("purge idempotency failed", "err", err)
 				} else if n > 0 {
 					log.Info("purged old idempotency records", "count", n)
+				}
+
+				// Everything else would otherwise grow without bound on a
+				// long-running server with a chatty CI pointed at it.
+				if cfg.RetentionPeriod > 0 {
+					if n, err := st.PurgeOld(cfg.RetentionPeriod); err != nil {
+						log.Warn("purge old records failed", "err", err)
+					} else if n > 0 {
+						log.Info("purged records past the retention period",
+							"count", n, "olderThan", cfg.RetentionPeriod)
+					}
 				}
 			}
 		}

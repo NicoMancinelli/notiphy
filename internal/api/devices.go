@@ -71,66 +71,16 @@ type webPushSubscribeRequest struct {
 // long inactivity — so a repeat subscribe for a known endpoint updates the
 // existing device instead of accumulating duplicates.
 func (s *Server) handleWebPushSubscribe(w http.ResponseWriter, r *http.Request) {
-	raw, err := readBody(r)
+	deviceID, status, err := s.upsertWebPushDevice(r)
 	if err != nil {
-		s.writeError(w, http.StatusBadRequest, "%s", err)
+		s.writeError(w, status, "%s", err)
 		return
 	}
-	var req webPushSubscribeRequest
-	if err := json.Unmarshal(raw, &req); err != nil {
-		s.writeError(w, http.StatusBadRequest, "invalid JSON body: %s", err)
-		return
-	}
-	if req.Endpoint == "" || req.Keys.P256dh == "" || req.Keys.Auth == "" {
-		s.writeError(w, http.StatusBadRequest, "endpoint, keys.p256dh and keys.auth are all required")
-		return
-	}
-
-	cfg := map[string]string{
-		"endpoint": req.Endpoint,
-		"p256dh":   req.Keys.P256dh,
-		"auth":     req.Keys.Auth,
-	}
-
-	if existing, err := s.store.DeviceByConfig("webpush", "endpoint", req.Endpoint); err == nil {
-		if err := s.store.UpdateDeviceConfig(existing.ID, cfg); err != nil {
-			s.log.Error("update webpush device failed", "err", err)
-			s.writeError(w, http.StatusInternalServerError, "internal error")
-			return
-		}
-		// A re-subscribe from a device we previously disabled as "gone" means
-		// it is back; re-enable it rather than leaving it silently dead.
-		if existing.Disabled {
-			if err := s.store.SetDeviceDisabled(existing.ID, false); err != nil {
-				s.log.Warn("re-enable device failed", "device", existing.ID, "err", err)
-			}
-		}
-		s.log.Info("web push subscription refreshed", "device", existing.ID)
-		s.writeJSON(w, http.StatusOK, map[string]any{"ok": true, "deviceId": existing.ID, "refreshed": true})
-		return
-	} else if !errors.Is(err, store.ErrNotFound) {
-		s.log.Error("device lookup failed", "err", err)
-		s.writeError(w, http.StatusInternalServerError, "internal error")
-		return
-	}
-
-	name := strings.TrimSpace(req.Name)
-	if name == "" {
-		name = "Web Push device"
-	}
-	platform := model.Platform(req.Platform)
-	if platform == "" {
-		platform = model.PlatformWeb
-	}
-
-	d := &model.Device{Name: name, Transport: "webpush", Platform: platform, Config: cfg}
-	if err := s.store.CreateDevice(d); err != nil {
-		s.log.Error("create webpush device failed", "err", err)
-		s.writeError(w, http.StatusInternalServerError, "internal error")
-		return
-	}
-	s.log.Info("web push device registered", "device", d.ID, "platform", platform)
-	s.writeJSON(w, http.StatusCreated, map[string]any{"ok": true, "deviceId": d.ID})
+	s.writeJSON(w, status, map[string]any{
+		"ok":        true,
+		"deviceId":  deviceID,
+		"refreshed": status == http.StatusOK,
+	})
 }
 
 // deviceCreateRequest registers any transport's device.

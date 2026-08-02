@@ -118,6 +118,37 @@ CREATE TABLE IF NOT EXISTS idempotency (
     PRIMARY KEY (token_id, key)
 );
 
+-- Capability tokens for an installed PWA.
+--
+-- iOS gives a home-screen web app its own cookie jar, separate from Safari, so
+-- an admin cookie set while browsing never reaches the installed app. The
+-- manifest bakes one of these into start_url at install time instead.
+CREATE TABLE IF NOT EXISTS app_tokens (
+    id         TEXT PRIMARY KEY,
+    token      TEXT NOT NULL UNIQUE,
+    label      TEXT NOT NULL DEFAULT '',
+    device_id  TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    last_seen  INTEGER
+);
+
+-- Failed pushes, retried with backoff. Without this a transient ntfy outage
+-- silently drops a notification, which for an approval means a waiting agent
+-- hangs until its timeout instead of ever reaching the phone.
+CREATE TABLE IF NOT EXISTS push_queue (
+    id           TEXT PRIMARY KEY,
+    device_id    TEXT NOT NULL,
+    event_id     TEXT NOT NULL DEFAULT '',
+    activity_id  TEXT NOT NULL DEFAULT '',
+    payload      TEXT NOT NULL,
+    attempts     INTEGER NOT NULL DEFAULT 0,
+    next_at      INTEGER NOT NULL,
+    done         INTEGER NOT NULL DEFAULT 0,
+    last_error   TEXT NOT NULL DEFAULT '',
+    created_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_push_queue_due ON push_queue(done, next_at);
+
 -- Outbound response callbacks, retried with backoff.
 CREATE TABLE IF NOT EXISTS callbacks (
     id          TEXT PRIMARY KEY,

@@ -173,6 +173,23 @@ func (s *Server) publish(r *http.Request, tok *model.Token, req *notifyRequest, 
 		return http.StatusInternalServerError, errorResponse{Error: "internal error"}
 	}
 
+	// Check there is somewhere to deliver *before* creating the response.
+	// Creating it first leaves an unanswerable pending row behind whenever
+	// delivery is impossible, since the caller gets a 400 and never learns
+	// the secret needed to answer it.
+	if spec != nil {
+		devices, derr := s.store.ListDevices(true)
+		if derr != nil {
+			s.log.Error("list devices failed", "err", derr)
+			return http.StatusInternalServerError, errorResponse{Error: "internal error"}
+		}
+		if len(devices) == 0 {
+			return http.StatusBadRequest, errorResponse{
+				Error: "no enabled devices are registered; add one at " + s.cfg.BaseURL + "/subscribe",
+			}
+		}
+	}
+
 	var resp *model.Response
 	if spec != nil {
 		ttl := s.cfg.DefaultResponseTTL

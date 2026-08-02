@@ -112,6 +112,7 @@ func cmdDevice(args []string) error {
 
 	fs := flag.NewFlagSet("device", flag.ExitOnError)
 	server := fs.String("server", "", "notiphy server base URL (or NOTIPHY_URL)")
+	admin := fs.String("admin-token", "", "operator token (or NOTIPHY_ADMIN_TOKEN)")
 	sub := args[0]
 	parseArgs(fs, args[1:])
 
@@ -124,9 +125,9 @@ func cmdDevice(args []string) error {
 			base = cfg.BaseURL
 		}
 	}
-	// Device management is server-side but not token-scoped, so build a bare
-	// client rather than requiring a webhook token for it.
-	c := &client{baseURL: base, http: http.DefaultClient}
+	// Device management needs the operator token rather than a webhook token:
+	// these endpoints add delivery targets, so they are gated separately.
+	c := &client{baseURL: base, admin: adminToken(*admin), http: http.DefaultClient}
 
 	switch sub {
 	case "list":

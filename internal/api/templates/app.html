@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>notiphy</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="notiphy">
+  <meta name="theme-color" content="#2f6df6">
+  {{template "style" .}}
+  <style>
+    /* Respect the notch and home indicator when running standalone. */
+    body { padding-top: max(24px, env(safe-area-inset-top)); padding-bottom: max(64px, env(safe-area-inset-bottom)); }
+    .row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+    .ask { border-left: 3px solid var(--accent); }
+    .ask h3 { margin:0 0 4px; font-size:16px; }
+    .ask p { margin:0 0 12px; color:var(--muted); font-size:14px; }
+    .bar { height:8px; border-radius:999px; background:var(--line); overflow:hidden; margin:10px 0 6px; }
+    .bar > i { display:block; height:100%; background:var(--accent); transition:width .4s ease; }
+    .banner-ok { border-left-color: var(--ok-fg); }
+    .spin { color:var(--muted); font-size:14px; }
+    .hide { display:none; }
+    .tiny { font-size:12px; color:var(--muted); }
+  </style>
+</head>
+<body>
+<div class="wrap narrow">
+
+  <div class="row">
+    <h1 style="margin:0">notiphy</h1>
+    <span id="conn" class="tiny">…</span>
+  </div>
+  <p class="sub" id="sub-state">Loading…</p>
+
+  <div id="enable-card" class="card hide">
+    <p style="margin:0 0 10px"><strong>Notifications are off for this install.</strong></p>
+    <p class="muted" style="font-size:14px; margin:0 0 12px">
+      Turn them on to receive approvals here.
+    </p>
+    <button id="enable" class="btn-primary" style="width:100%">Enable notifications</button>
+    <div id="enable-status" class="tiny" style="margin-top:10px"></div>
+  </div>
+
+  <h2>Waiting on you</h2>
+  <div id="pending"><p class="empty">Nothing right now.</p></div>
+
+  <h2>Running</h2>
+  <div id="activities"><p class="empty">Nothing running.</p></div>
+
+  {{if not .NativeLive}}
+    <p class="tiny" style="margin-top:28px">
+      Live Activities appear here rather than on the Lock Screen — a native
+      ActivityKit card needs the iOS app and a paid Apple Developer membership.
+    </p>
+  {{end}}
+
+</div>
+<script src="/static/appshell.js"></script>
+</body>
+</html>

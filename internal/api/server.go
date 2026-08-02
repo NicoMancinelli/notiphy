@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/NicoMancinelli/notiphy/internal/callback"
 	"github.com/NicoMancinelli/notiphy/internal/config"
 	"github.com/NicoMancinelli/notiphy/internal/model"
+	"github.com/NicoMancinelli/notiphy/internal/ratelimit"
 	"github.com/NicoMancinelli/notiphy/internal/router"
 	"github.com/NicoMancinelli/notiphy/internal/store"
 	"github.com/NicoMancinelli/notiphy/internal/transport"
@@ -32,17 +34,21 @@ var webFS embed.FS
 
 // Server holds the dependencies shared by every handler.
 type Server struct {
-	cfg    config.Config
-	store  *store.Store
-	reg    *transport.Registry
-	rt     *router.Router
-	hub    *activity.Hub
-	cb     *callback.Dispatcher
-	log    *slog.Logger
-	tmpl   *template.Template
-	vapid  string // public key, served to the PWA at subscribe time
-	static http.Handler
+	cfg     config.Config
+	store   *store.Store
+	reg     *transport.Registry
+	rt      *router.Router
+	hub     *activity.Hub
+	cb      *callback.Dispatcher
+	log     *slog.Logger
+	tmpl    *template.Template
+	vapid   string // public key, served to the PWA at subscribe time
+	static  http.Handler
+	limiter *ratelimit.Limiter
 }
+
+// Limiter exposes the rate limiter so the server can sweep its buckets.
+func (s *Server) Limiter() *ratelimit.Limiter { return s.limiter }
 
 // New builds a Server and parses the embedded templates.
 func New(
@@ -66,16 +72,17 @@ func New(
 	}
 
 	return &Server{
-		cfg:    cfg,
-		store:  st,
-		reg:    reg,
-		rt:     rt,
-		hub:    hub,
-		cb:     cb,
-		log:    log,
-		tmpl:   tmpl,
-		vapid:  vapidPublic,
-		static: http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+		cfg:     cfg,
+		store:   st,
+		reg:     reg,
+		rt:      rt,
+		hub:     hub,
+		cb:      cb,
+		log:     log,
+		tmpl:    tmpl,
+		vapid:   vapidPublic,
+		static:  http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
+		limiter: ratelimit.New(cfg.RateLimitPerMinute, time.Minute),
 	}, nil
 }
 
@@ -84,7 +91,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
 	// --- Hark-compatible webhook API ---
-	mux.HandleFunc("POST /hooks/{token}", s.handleNotify)
+	mux.HandleFunc("POST /hooks/{token}", s.rateLimited(s.handleNotify))
 	mux.HandleFunc("POST /hooks/{token}/live-activities", s.handleActivityStart)
 	mux.HandleFunc("GET /hooks/{token}/live-activities/{id}", s.handleActivityGet)
 	mux.HandleFunc("PATCH /hooks/{token}/live-activities/{id}", s.handleActivityUpdate)
@@ -125,11 +132,25 @@ func (s *Server) Handler() http.Handler {
 		mux.Handle(p, guarded)
 	}
 
+	// --- Installed PWA. Its own capability token, not the admin token: a phone
+	// receiving notifications has no business minting webhook credentials. ---
+	appMux := http.NewServeMux()
+	appMux.HandleFunc("GET /app", s.handleAppShell)
+	appMux.HandleFunc("GET /api/app/state", s.handleAppState)
+	appMux.HandleFunc("POST /api/app/subscribe", s.handleAppSubscribe)
+	appMux.HandleFunc("GET /api/app/key", s.handleVAPIDKey)
+
+	guardedApp := s.requireApp(appMux)
+	mux.Handle("/app", guardedApp)
+	mux.Handle("/api/app/", guardedApp)
+
 	// --- Assets. The service worker must be served from the root so its scope
 	// covers the whole origin; a /static/ path would silently limit it. ---
 	mux.Handle("GET /static/", s.static)
 	mux.HandleFunc("GET /sw.js", s.handleServiceWorker)
-	mux.HandleFunc("GET /manifest.webmanifest", s.handleManifest)
+	// The manifest is dynamic: it carries a freshly minted app token in
+	// start_url, which is the only channel from Safari into the installed app.
+	mux.HandleFunc("GET /manifest.webmanifest", s.handleAppManifest)
 	// Browsers request these from the root regardless of what the HTML links
 	// to; serving them avoids a 404 on every page load and gives iOS a Home
 	// Screen icon when the PWA is installed.
@@ -197,6 +218,38 @@ func (s *Server) render(w http.ResponseWriter, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := s.tmpl.ExecuteTemplate(w, name, data); err != nil {
 		s.log.Error("render template failed", "template", name, "err", err)
+	}
+}
+
+// rateLimited enforces the configured per-token and per-account limits.
+//
+// Limiting is off unless configured, since this is your server rather than a
+// metered tier. When on, it answers 429 with Retry-After, matching Hark.
+func (s *Server) rateLimited(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !s.limiter.Enabled() {
+			next(w, r)
+			return
+		}
+
+		// Key on the token itself rather than the resolved id: an unknown
+		// token should not get unlimited attempts at guessing.
+		token := r.PathValue("token")
+		for _, key := range []string{"tok:" + token, "acct:" + store.DefaultAccountID} {
+			ok, retry := s.limiter.Allow(key)
+			if ok {
+				continue
+			}
+			secs := int(retry.Seconds())
+			if secs < 1 {
+				secs = 1
+			}
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+			s.writeError(w, http.StatusTooManyRequests,
+				"rate limit exceeded; retry in %d seconds", secs)
+			return
+		}
+		next(w, r)
 	}
 }
 

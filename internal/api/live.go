@@ -78,6 +78,12 @@ func (s *Server) handleLiveStream(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Accel-Buffering", "no")
 	w.WriteHeader(http.StatusOK)
 
+	// The request logger only records when a handler returns, and an SSE
+	// connection is held open for the life of the activity — so without this a
+	// live activity being watched is invisible in the logs.
+	s.log.Info("sse stream opened", "activity", id, "watchers", s.hub.Watchers(id)+1)
+	defer s.log.Info("sse stream closed", "activity", id)
+
 	updates, cancel := s.hub.Subscribe(id)
 	defer cancel()
 

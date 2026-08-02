@@ -40,13 +40,19 @@ change rather than a rewrite.
 |---|---|---|---|---|
 | Push notification | ✅ | ✅ | ✅ | ✅ |
 | Title / body / image / tap-URL | ✅ | ✅ | ✅ | ✅ |
-| One-tap Approve/Deny | ❌ → web page | ❌ → web page | ✅ native | ✅ native |
+| One-tap Approve/Deny | in the app | in the app | ✅ native | ✅ native |
 | Live Activity / Dynamic Island | ❌ → live web page | ❌ → live web page | n/a | ✅ |
 | No third party in the loop | ❌ ntfy.sh poll relay | ✅ fully self-hosted | ✅ | ✅ |
 | Cost | free | free | free | $99/yr |
 
-**Approvals still work on iPhone for free.** You tap the notification, a page
-opens on your own server, you tap Approve. One extra tap versus Hark.
+**Approvals still work on iPhone for free.** Install the PWA to your Home
+Screen and you get an app that lists everything waiting on you with Approve /
+Deny right there — one tap, same as native. Coming from a notification costs one
+extra tap versus Hark, because WebKit will not render action buttons on the
+notification itself.
+
+The Home Screen icon also carries a **badge** with the number of pending
+approvals, which is the closest free stand-in for a Live Activity glance.
 
 ---
 
@@ -156,6 +162,21 @@ echo $?   # 0 approved · 2 denied · 4 timed out · 7 no devices registered
 
 ---
 
+## The app ("notiphy-lite")
+
+Add notiphy to your Home Screen from `/subscribe` and it behaves like an app:
+
+- **Waiting on you** — every pending approval, answerable in one tap
+- **Running** — live activities with progress
+- **Badge** on the icon for the pending count
+- **Self-repairing subscription** — iOS silently expires Web Push
+  subscriptions after a few weeks of not opening the app, so the shell
+  re-registers on every launch rather than going quietly dead
+
+No Apple Developer account, no App Store, nothing third-party. What it cannot
+do is render a Lock Screen Live Activity or put buttons on the notification
+itself — those need the native app.
+
 ## Live Activities
 
 The state machine is real regardless of what your devices can render — start,
@@ -214,6 +235,15 @@ diverging.
 
 **Callbacks** are queued in SQLite and retried five times, from immediate out to
 an hour, surviving restarts — the point is that your CI job can stop waiting.
+
+**Pushes are retried too**, five attempts from 5 seconds out to 10 minutes. A
+transient ntfy outage should not silently drop an approval and leave an agent
+waiting on a notification that never arrives. Retries stop early if the question
+has already been answered elsewhere.
+
+**Rate limiting** is off by default — this is your server. Set
+`rate_limit_per_minute` to enable Hark-compatible `429` responses with
+`Retry-After`.
 
 Status codes match Hark: `200 201 202 400 404 409 429 502`.
 

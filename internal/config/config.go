@@ -41,6 +41,11 @@ type Config struct {
 	// DefaultStaleAfter applies when a caller omits a staleness window.
 	DefaultStaleAfter time.Duration `yaml:"default_stale_after"`
 
+	// RetentionPeriod is how long delivered events, deliveries, and ended
+	// activities are kept. Zero disables purging and lets the database grow
+	// without bound, which is rarely what anyone wants on a homelab box.
+	RetentionPeriod time.Duration `yaml:"retention_period"`
+
 	// ActivityProgressStep is how much `progress` must advance before a
 	// milestone notification fires on transports that cannot update in place.
 	// 0.25 means notify at roughly every quarter.
@@ -75,6 +80,7 @@ func Default() Config {
 		DefaultResponseTTL:   5 * time.Minute,
 		DefaultActivityTTL:   8 * time.Hour,
 		DefaultStaleAfter:    4 * time.Hour,
+		RetentionPeriod:      30 * 24 * time.Hour,
 		ActivityProgressStep: 0.25,
 		VAPIDSubject:         "mailto:admin@localhost",
 		NtfyDefaultServer:    "https://ntfy.sh",
@@ -148,6 +154,7 @@ func (c *Config) applyEnv() {
 	dur("DEFAULT_RESPONSE_TTL", &c.DefaultResponseTTL)
 	dur("DEFAULT_ACTIVITY_TTL", &c.DefaultActivityTTL)
 	dur("DEFAULT_STALE_AFTER", &c.DefaultStaleAfter)
+	dur("RETENTION_PERIOD", &c.RetentionPeriod)
 	flt("ACTIVITY_PROGRESS_STEP", &c.ActivityProgressStep)
 	str("VAPID_PUBLIC_KEY", &c.VAPIDPublicKey)
 	str("VAPID_PRIVATE_KEY", &c.VAPIDPrivateKey)

@@ -163,6 +163,14 @@ func (r *Router) Deliver(ctx context.Context, ev *model.Event, resp *model.Respo
 		Priority: ev.Priority,
 	}
 
+	// Badge with everything currently awaiting an answer, not just this one,
+	// so the icon reflects the real backlog.
+	if n, err := r.store.CountPendingResponses(); err == nil {
+		base.BadgeCount = &n
+	} else {
+		r.log.Warn("count pending responses failed", "err", err)
+	}
+
 	var (
 		wg        sync.WaitGroup
 		mu        sync.Mutex
@@ -194,6 +202,11 @@ func (r *Router) Deliver(ctx context.Context, ev *model.Event, resp *model.Respo
 			mu.Unlock()
 
 			r.afterSend(ev.ID, "", d, err)
+			if err != nil {
+				// A transient failure must not silently drop the push: an
+				// unanswered approval leaves an agent hanging until timeout.
+				r.enqueueRetry(d, &n, ev.ID, "", err)
+			}
 		}(d, t)
 	}
 	wg.Wait()

@@ -81,6 +81,9 @@ type webPushPayload struct {
 	Tag      string          `json:"tag,omitempty"`
 	Actions  []webPushAction `json:"actions,omitempty"`
 	Priority int             `json:"priority,omitempty"`
+	// BadgeCount drives the Home Screen icon badge, which is the only ambient
+	// signal a web app gets on iOS.
+	BadgeCount *int `json:"badgeCount,omitempty"`
 }
 
 type webPushAction struct {
@@ -98,11 +101,12 @@ func (w *WebPush) Send(ctx context.Context, d *model.Device, notif *model.Notifi
 	}
 
 	payload := webPushPayload{
-		Title:    notif.Title,
-		Body:     notif.Body,
-		Image:    notif.ImageURL,
-		URL:      notif.URL,
-		Priority: notif.Priority,
+		Title:      notif.Title,
+		Body:       notif.Body,
+		Image:      notif.ImageURL,
+		URL:        notif.URL,
+		Priority:   notif.Priority,
+		BadgeCount: notif.BadgeCount,
 	}
 	if payload.Title == "" {
 		payload.Title = "notiphy"

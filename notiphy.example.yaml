@@ -23,6 +23,10 @@ rate_limit_per_minute: 0
 # How long an unanswered approval stays answerable when the caller does not say.
 default_response_ttl: 5m
 
+# How long delivered events, deliveries, and ended activities are kept before
+# being purged. Zero disables purging and lets the database grow without bound.
+retention_period: 720h
+
 # Live Activity lifetimes when the caller does not say.
 default_activity_ttl: 8h
 default_stale_after: 4h

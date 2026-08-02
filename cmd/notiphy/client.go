@@ -17,13 +17,18 @@ import (
 type client struct {
 	baseURL string
 	token   string
-	http    *http.Client
+	// admin authorizes the operator endpoints (/api/devices, ...), which are
+	// gated separately from webhook tokens because they add devices and mint
+	// credentials.
+	admin string
+	http  *http.Client
 }
 
 // cliConfig is the on-disk client config at ~/.config/notiphy/config.json.
 type cliConfig struct {
-	URL   string `json:"url"`
-	Token string `json:"token"`
+	URL        string `json:"url"`
+	Token      string `json:"token"`
+	AdminToken string `json:"adminToken"`
 }
 
 func configPath() string {
@@ -71,8 +76,29 @@ func newClient(urlFlag, tokenFlag string) (*client, error) {
 	return &client{
 		baseURL: strings.TrimRight(url, "/"),
 		token:   token,
+		admin:   adminToken(""),
 		http:    &http.Client{Timeout: 30 * time.Second},
 	}, nil
+}
+
+// adminToken resolves the operator token from a flag, the environment, or the
+// client config file.
+func adminToken(flagValue string) string {
+	if flagValue != "" {
+		return flagValue
+	}
+	if v := os.Getenv("NOTIPHY_ADMIN_TOKEN"); v != "" {
+		return v
+	}
+	if p := configPath(); p != "" {
+		if data, err := os.ReadFile(p); err == nil {
+			var c cliConfig
+			if json.Unmarshal(data, &c) == nil {
+				return c.AdminToken
+			}
+		}
+	}
+	return ""
 }
 
 // hookURL builds a URL under this client's webhook token.
@@ -100,6 +126,9 @@ func (c *client) do(method, url string, body any, out any) (int, error) {
 		req.Header.Set("Content-Type", "application/json")
 	}
 	req.Header.Set("Accept", "application/json")
+	if c.admin != "" {
+		req.Header.Set("Authorization", "Bearer "+c.admin)
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {
